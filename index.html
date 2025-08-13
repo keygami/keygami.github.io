@@ -1,9 +1,47 @@
 <!doctype html>
-<html lang="uk">
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Keygami (fixed tetris controls)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Keygami: Elegant Puzzle Game</title>
+
+  <meta name="description" content="Get ready for a surprising challenge with Keygami. This puzzle game is effortless to learn but masterfully complex, revealing beautiful geometric patterns with every move. Play now and get lost in the flow." />
+  <meta name="keywords" content="Keygami, puzzle game, logic game, indie game, geometric puzzle, seamless puzzle, unexpected puzzle, elegant puzzle, minimalist puzzle, brain teaser, casual game, relaxing game" />
+  <meta name="author" content="Yaroslav Podorvanov, OpenAI ChatGPT, Google Gemini">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Keygami: Elegant Puzzle Game" />
+  <meta property="og:description" content="Get ready for a surprising challenge with Keygami. This puzzle game is effortless to learn but masterfully complex, revealing beautiful geometric patterns with every move. Play now and get lost in the flow." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://keygami.github.io/" />
+  <meta property="og:image" content="https://keygami.github.io/preview.png" />
+  <meta property="og:image:alt" content="Keygami preview" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Keygami: Elegant Puzzle Game" />
+  <meta name="twitter:description" content="Get ready for a surprising challenge with Keygami. This puzzle game is effortless to learn but masterfully complex, revealing beautiful geometric patterns with every move. Play now and get lost in the flow." />
+  <meta name="twitter:image" content="https://keygami.github.io/preview.png" />
+  <meta name="twitter:image:alt" content="Keygami preview" />
+
+  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+  <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+  <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+  <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+  <link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="msapplication-TileColor" content="#ffffff">
+  <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+  <meta name="theme-color" content="#ffffff">
+
 <style>
   :root{
     --bg:#0b1220;
@@ -170,15 +208,15 @@
 
   // localization map
   const translations = {
-    en: { Red: 'Red', Blue: 'Blue', toBe: 'To be continue ...', gameOver: 'Game over' },
-    uk: { Red: 'Червона', Blue: 'Синя', toBe: 'To be continue ...', gameOver: 'Game over' },
-    es: { Red: 'Roja', Blue: 'Azul', toBe: 'To be continue ...', gameOver: 'Game over' },
-    pt: { Red: 'Vermelha', Blue: 'Azul', toBe: 'To be continue ...', gameOver: 'Game over' },
-    ja: { Red: '赤', Blue: '青', toBe: 'To be continue ...', gameOver: 'ゲームオーバー' },
-    fr: { Red: 'Rouge', Blue: 'Bleu', toBe: 'To be continue ...', gameOver: 'Game over' },
-    it: { Red: 'Rossa', Blue: 'Blu', toBe: 'To be continue ...', gameOver: 'Game over' },
-    tr: { Red: 'Kırmızı', Blue: 'Mavi', toBe: 'To be continue ...', gameOver: 'Game over' }
-  };
+  "en": { "Red": "Red", "Blue": "Blue", "toBe": "To be continued...", "gameOver": "Game over" },
+  "uk": { "Red": "Червона", "Blue": "Синя", "toBe": "Далі буде...", "gameOver": "Гру закінчено" },
+  "es": { "Red": "Roja", "Blue": "Azul", "toBe": "Continuará...", "gameOver": "Fin del juego" },
+  "pt": { "Red": "Vermelha", "Blue": "Azul", "toBe": "Continua...", "gameOver": "Fim do jogo" },
+  "ja": { "Red": "赤", "Blue": "青", "toBe": "続く", "gameOver": "ゲームオーバー" },
+  "fr": { "Red": "Rouge", "Blue": "Bleu", "toBe": "À suivre...", "gameOver": "Fin de partie" },
+  "it": { "Red": "Rossa", "Blue": "Blu", "toBe": "Continua...", "gameOver": "Gioco finito" },
+  "tr": { "Red": "Kırmızı", "Blue": "Mavi", "toBe": "Devam edecek...", "gameOver": "Oyun bitti" }
+};
 
   // determine language based on navigator
   function detectLang() {
