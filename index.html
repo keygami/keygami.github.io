@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Keygami — Snake ↔ Tetris</title>
+    <style>
+        /* ====== Base layout & typography ====== */
+        :root{
+            --bg:#0b0f1a;          /* deep space */
+            --panel:#121829;       /* card bg */
+            --ink:#e5ecff;         /* main text */
+            --muted:#9fb0d6;       /* secondary */
+            --accent:#4f8cff;      /* blue */
+            --danger:#ff4f6d;      /* red */
+            --grid: #1b2742;
+            --cell: 30px;          /* grid cell size (px) */
+            --w: 10;               /* grid width cells */
+            --h: 20;               /* grid height cells */
+            --radius: 9999px;      /* full rounded */
+            --shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+        }
+        html, body{height:100%;}
+        body{
+            margin:0; background: radial-gradient(1200px 800px at 70% -10%, #1a2440 0%, #0b0f1a 60%);
+            color:var(--ink); font: 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+            overflow:hidden; /* prevent page scroll */
+            -webkit-user-select:none; user-select:none;
+            touch-action:none; /* avoid touch scrolling */
+        }
+        .wrap{display:grid; place-items:center; height:100%; padding:16px;}
+        .hud{position:fixed; inset:16px 16px auto auto; background:rgba(18,24,41,.55); backdrop-filter: blur(6px);
+            padding:10px 14px; border-radius:14px; box-shadow: var(--shadow); font-weight:600; color:var(--muted)}
+        .hud b{color:var(--ink)}
+
+        /* ====== Start screen ====== */
+        .start{
+            display:flex; flex-direction:column; gap:22px; align-items:center; text-align:center;
+            background:linear-gradient(180deg, rgba(30,41,72,.65), rgba(11,15,26,.65));
+            padding:28px; border-radius:20px; box-shadow: var(--shadow);
+            max-width:560px;
+        }
+        .title{font-size: clamp(22px, 4vw, 34px); font-weight:800; letter-spacing: .2px}
+        .subtitle{color:var(--muted)}
+        .pills{display:flex; gap:16px; flex-wrap:wrap; justify-content:center}
+        .pill{
+            border:none; border-radius: var(--radius); padding:14px 26px; font-weight:800; font-size:18px; cursor:pointer;
+            letter-spacing:.2px; color:#fff; transition: transform .06s ease, filter .15s ease; box-shadow: var(--shadow)
+        }
+        .pill.blue{ background: linear-gradient(180deg, #5aa0ff, #3e77ff)}
+        .pill.red{  background: linear-gradient(180deg, #ff6d86, #ff3659)}
+        .pill:active{ transform: scale(.98)}
+
+        /* ====== Canvas panel ====== */
+        .panel{display:grid; gap:12px;}
+        .stage{
+            width: calc(var(--cell) * var(--w));
+            height: calc(var(--cell) * var(--h));
+            background: repeating-linear-gradient(0deg, var(--panel), var(--panel) calc(var(--cell) - 1px), var(--grid) calc(var(--cell) - 1px), var(--grid) var(--cell)),
+            repeating-linear-gradient(90deg, var(--panel), var(--panel) calc(var(--cell) - 1px), var(--grid) calc(var(--cell) - 1px), var(--grid) var(--cell));
+            border-radius: 18px; box-shadow: var(--shadow); position:relative; overflow:hidden;
+        }
+        canvas{ display:block; width:100%; height:100%; image-rendering: pixelated }
+
+        .msg{
+            position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:24px;
+            background:rgba(9,12,22,.66); backdrop-filter: blur(4px); font-size: clamp(22px, 4vw, 36px); font-weight:900; letter-spacing:.3px
+        }
+        .msg small{display:block; font-size:14px; color:var(--muted); font-weight:600; margin-top:10px}
+
+        .footer{opacity:.75; font-size:13px; text-align:center}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="panel">
+        <div class="hud" id="hud">Score: <b>0</b> • Mode: <b>—</b></div>
+        <div class="stage" id="stage">
+            <canvas id="game" width="300" height="600"></canvas>
+            <div class="msg" id="overlay" hidden>
+                <div id="overlayText"></div>
+            </div>
+        </div>
+        <div class="start" id="start">
+            <div class="title">Keygami</div>
+            <div class="subtitle">Unpredictable yet seamless — pick a pill, then play with arrow keys.</div>
+            <div class="pills">
+                <button class="pill blue" id="bluePill">…</button>
+                <button class="pill red"  id="redPill">…</button>
+            </div>
+            <div class="footer">Arrow keys control the game. Page won't scroll.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        "use strict";
+        // ===== Localization =====
+        // Minimal i18n for labels and end messages. Comments are in English, as requested.
+        const SUPPORTED = ["es","pt","ja","uk","fr","it","tr","en"]; // order doesn't matter
+        const I18N = {
+            en: { red:"Red", blue:"Blue", gameOver:"Game over", tbc:"To be continue ..." },
+            uk: { red:"Червона", blue:"Синя", gameOver:"Гру завершено", tbc:"Продовження буде ..." },
+            es: { red:"Roja", blue:"Azul", gameOver:"Juego terminado", tbc:"Continuará ..." },
+            pt: { red:"Vermelha", blue:"Azul", gameOver:"Fim de jogo", tbc:"Continua..." },
+            fr: { red:"Rouge", blue:"Bleu", gameOver:"Fin de partie", tbc:"À suivre ..." },
+            it: { red:"Rossa", blue:"Blu", gameOver:"Fine della partita", tbc:"Continua ..." },
+            tr: { red:"Kırmızı", blue:"Mavi", gameOver:"Oyun bitti", tbc:"Devam edecek ..." },
+            ja: { red:"赤", blue:"青", gameOver:"ゲームオーバー", tbc:"つづく …" },
+        };
+
+        function chooseLangForRun(){
+            // First 3 runs: use browser language. After that: random
+            const key = "keygamiRuns";
+            const runs = Number(localStorage.getItem(key) || 0);
+            const langs = navigator.languages || [navigator.language || "en"];
+            const browserLang = (langs.map(l => l.toLowerCase().split("-")[0]).find(l => SUPPORTED.includes(l))) || "en";
+            let picked;
+            if (runs < 3) picked = browserLang; else picked = SUPPORTED[Math.floor(Math.random()*SUPPORTED.length)];
+            localStorage.setItem(key, String(runs+1));
+            return picked;
+        }
+
+        // ===== DOM refs =====
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const overlay = document.getElementById("overlay");
+        const overlayText = document.getElementById("overlayText");
+        const startPanel = document.getElementById("start");
+        const blueBtn = document.getElementById("bluePill");
+        const redBtn = document.getElementById("redPill");
+        const hud = document.getElementById("hud");
+        const stage = document.getElementById("stage");
+
+        // Fit canvas internal size to CSS grid cell size
+        function fitCanvas(){
+            const wCells = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--w'));
+            const hCells = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--h'));
+            const cellPx = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'));
+            canvas.width = wCells * cellPx;
+            canvas.height = hCells * cellPx;
+        }
+        fitCanvas();
+        addEventListener("resize", fitCanvas);
+
+        // Prevent page from reacting to arrow keys while the game is focused
+        addEventListener("keydown", (e) => {
+            const keys = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","Space","PageUp","PageDown"]; // be extra safe
+            if(keys.includes(e.key)) { e.preventDefault(); }
+        }, { passive: false });
+
+        // ===== Game State =====
+        const COLS = 10, ROWS = 20, CELL = canvas.width / COLS;
+        const COLORS = {
+            bg:    "#121829",
+            ghost: "#243056",
+            snake: "#4f8cff",
+            food:  "#ff4f6d",
+            wall:  "#1b2742",
+            text:  "#e5ecff",
+        };
+
+        let lang = chooseLangForRun();
+        let labels = I18N[lang];
+        // Pills per spec: text swapped (blue pill says "Red", red pill says "Blue")
+        function setPills(){
+            blueBtn.textContent = labels.red; // blue pill shows "Red"
+            redBtn.textContent  = labels.blue; // red pill shows "Blue"
+        }
+        setPills();
+
+        // Core loop timing
+        let tick = 0;          // frame counter
+        let dropInterval = 30; // tetris drop speed (frames)
+        let snakeInterval = 8; // snake speed (frames)
+        let mode = "idle";     // "snake" | "tetris" | "idle"
+        let score = 0;
+        let transformAt = 0;   // random threshold [5..15]
+        let transformed = false;
+        let startedWithLang = lang; // to keep the session language for end screens
+
+        // HUD update
+        function drawHUD(){
+            const m = mode === "snake" ? "Snake" : mode === "tetris" ? "Tetris" : "—";
+            hud.innerHTML = `Score: <b>${score}</b> • Mode: <b>${m}</b>`;
+        }
+        drawHUD();
+
+        // ===== Utilities =====
+        function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+        function clone2D(arr){ return arr.map(r => r.slice()); }
+        function clearBoard(){
+            ctx.fillStyle = COLORS.bg;
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+        }
+        function drawCell(x,y,color){
+            ctx.fillStyle = color;
+            ctx.fillRect(x*CELL, y*CELL, CELL-1, CELL-1);
+        }
+        function inBounds(x,y){ return x>=0 && x<COLS && y>=0 && y<ROWS; }
+
+        // ===== Snake =====
+        let snake, dir, nextDir, food;
+        function snakeInit(){
+            const mid = Math.floor(COLS/2);
+            snake = [{x:mid, y:Math.floor(ROWS*0.7)},{x:mid-1,y:Math.floor(ROWS*0.7)}];
+            dir = {x:1,y:0};
+            nextDir = {x:1,y:0};
+            placeFood();
+        }
+        function placeFood(){
+            while(true){
+                const f = {x: randInt(0,COLS-1), y: randInt(0,ROWS-1)};
+                if(!snake.some(p=>p.x===f.x && p.y===f.y)){ food = f; return; }
+            }
+        }
+        function snakeTurn(key){
+            if(key==="ArrowUp"   && dir.y!== 1) nextDir = {x:0,y:-1};
+            if(key==="ArrowDown" && dir.y!==-1) nextDir = {x:0,y: 1};
+            if(key==="ArrowLeft" && dir.x!== 1) nextDir = {x:-1,y:0};
+            if(key==="ArrowRight"&& dir.x!==-1) nextDir = {x: 1,y:0};
+        }
+        function snakeStep(){
+            dir = nextDir;
+            const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+            // wall or self collision
+            if(!inBounds(head.x, head.y) || snake.some(p=>p.x===head.x && p.y===head.y)){
+                endGame(false); return;
+            }
+            snake.unshift(head);
+            if(head.x===food.x && head.y===food.y){
+                score++;
+                drawHUD();
+                placeFood();
+                maybeTransform();
+            } else {
+                snake.pop();
+            }
+            // render
+            clearBoard();
+            // food
+            drawCell(food.x, food.y, COLORS.food);
+            // snake
+            for(const s of snake){ drawCell(s.x, s.y, COLORS.snake); }
+        }
+
+        // ===== Tetris =====
+        // Board grid: 0 empty, >0 color index
+        let board, piece;
+        const TCOLORS = ["#4f8cff","#ffd166","#06d6a0","#ff4f6d","#be4fff","#00d1ff","#ff8c42"]; // seven-ish
+        const TETS = [
+            // shapes are 4x4 matrices
+            [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
+            [[2,0,0],[2,2,2],[0,0,0]],                 // J
+            [[0,0,3],[3,3,3],[0,0,0]],                 // L
+            [[4,4],[4,4]],                             // O
+            [[0,5,5],[5,5,0],[0,0,0]],                 // S
+            [[0,6,0],[6,6,6],[0,0,0]],                 // T
+            [[7,7,0],[0,7,7],[0,0,0]],                 // Z
+        ];
+        function newBoard(){
+            board = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+        }
+        function spawnPiece(preferX){
+            const s = TETS[randInt(0, TETS.length-1)].map(r=>r.slice());
+            const color = randInt(1, TCOLORS.length);
+            piece = { x: preferX ?? 3, y: -1, m: s, c: color };
+            if(collide(0,1,piece.m)) { endGame(false); }
+        }
+        function rotate(m){
+            const N = m.length;
+            const r = Array.from({length:N},()=>Array(N).fill(0));
+            for(let y=0;y<N;y++) for(let x=0;x<N;x++) r[x][N-1-y]=m[y][x];
+            return r;
+        }
+        function collide(dx,dy,m){
+            const N = m.length;
+            for(let y=0;y<N;y++) for(let x=0;x<N;x++) if(m[y][x]){
+                const nx = piece.x + x + dx;
+                const ny = piece.y + y + dy;
+                if(nx<0 || nx>=COLS || ny>=ROWS) return true;
+                if(ny>=0 && board[ny][nx]) return true;
+            }
+            return false;
+        }
+        function merge(){
+            const N = piece.m.length;
+            for(let y=0;y<N;y++) for(let x=0;x<N;x++) if(piece.m[y][x]){
+                const nx = piece.x + x, ny = piece.y + y;
+                if(ny>=0) board[ny][nx] = piece.c;
+            }
+        }
+        function clearLines(){
+            let lines = 0;
+            for(let y=ROWS-1;y>=0;y--){
+                if(board[y].every(v=>v)){ board.splice(y,1); board.unshift(Array(COLS).fill(0)); lines++; y++; }
+            }
+            if(lines>0){ score += lines; drawHUD(); maybeTransform(); }
+        }
+        function tetrisStep(){
+            // gravity
+            if(!collide(0,1,piece.m)) piece.y++;
+            else { merge(); clearLines(); spawnPiece(); }
+            // render
+            clearBoard();
+            // draw board
+            for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(board[y][x]){
+                drawCell(x,y, TCOLORS[(board[y][x]-1)%TCOLORS.length]);
+            }
+            // draw piece
+            const N = piece.m.length;
+            for(let y=0;y<N;y++) for(let x=0;x<N;x++) if(piece.m[y][x]){
+                const nx = piece.x + x, ny = piece.y + y;
+                if(ny>=0) drawCell(nx, ny, TCOLORS[(piece.c-1)%TCOLORS.length]);
+            }
+        }
+
+        // ===== Transformations =====
+        function maybeTransform(){
+            if(transformed) return;
+            if(score >= transformAt){
+                if(mode === "snake"){ // become a falling tetris piece near head
+                    transformed = true;
+                    // Use snake head x to spawn
+                    const head = snake[0];
+                    newBoard(); // clear board when switching to tetris
+                    spawnPiece(Math.max(0, Math.min(COLS-4, head.x-1)));
+                    mode = "tetris"; drawHUD();
+                } else if(mode === "tetris"){ // board's largest connected cluster becomes a snake
+                    transformed = true;
+                    // Find connected components
+                    const seen = Array.from({length:ROWS}, ()=>Array(COLS).fill(false));
+                    let best = [];
+                    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(board[y][x] && !seen[y][x]){
+                        const q=[[x,y]]; seen[y][x]=true; const comp=[[x,y]];
+                        while(q.length){
+                            const [cx,cy]=q.shift();
+                            for(const [dx,dy] of dirs){
+                                const nx=cx+dx, ny=cy+dy;
+                                if(inBounds(nx,ny) && board[ny][nx] && !seen[ny][nx]){ seen[ny][nx]=true; q.push([nx,ny]); comp.push([nx,ny]); }
+                            }
+                        }
+                        if(comp.length>best.length) best=comp;
+                    }
+                    // Everything not in best becomes food tiles; best becomes snake body order
+                    const foodTiles = [];
+                    const inBest = new Set(best.map(([x,y])=>`${x},${y}`));
+                    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(board[y][x]){
+                        const key = `${x},${y}`;
+                        if(!inBest.has(key)) foodTiles.push({x,y});
+                    }
+                    // Create a snake path by sorting best by y then x (simple, not perfect path but okay)
+                    best.sort((a,b)=> a[1]-b[1] || a[0]-b[0]);
+                    if(best.length<2){ // fallback if nothing significant
+                        snakeInit();
+                    } else {
+                        snake = best.map(([x,y])=>({x,y}));
+                        dir = {x:1,y:0}; nextDir=dir; // arbitrary
+                        // Place one food at a former block if available, else random
+                        if(foodTiles.length){ food = foodTiles[randInt(0,foodTiles.length-1)]; }
+                        else placeFood();
+                    }
+                    mode = "snake"; drawHUD();
+                }
+            }
+        }
+
+        // ===== Input handling =====
+        addEventListener("keydown", (e)=>{
+            if(e.repeat) return;
+            if(mode === "snake"){
+                snakeTurn(e.key);
+            } else if(mode === "tetris"){
+                if(e.key === "ArrowLeft" && !collide(-1,0,piece.m)) piece.x--;
+                if(e.key === "ArrowRight"&& !collide(1,0,piece.m)) piece.x++;
+                if(e.key === "ArrowDown"){ if(!collide(0,1,piece.m)) piece.y++; }
+                if(e.key === "ArrowUp"){ const r = rotate(piece.m); if(!collide(0,0,r)) piece.m = r; }
+            }
+        }, { passive:false });
+
+        // ===== Game control =====
+        function startGame(startMode){
+            // Set session language now
+            startedWithLang = lang; labels = I18N[startedWithLang];
+            // Reset
+            score = 0; transformed = false; transformAt = randInt(5,15);
+            drawHUD(); overlay.hidden = true; startPanel.style.display = "none";
+
+            if(startMode === "snake"){ mode = "snake"; snakeInit(); }
+            else { mode = "tetris"; newBoard(); spawnPiece(); }
+            drawHUD();
+        }
+
+        function endGame(won){
+            mode = "idle";
+            const m = won ? labels.tbc : labels.gameOver;
+            overlayText.innerHTML = `<div>${m}</div><small>Score: ${score}</small>`;
+            overlay.hidden = false;
+            // reset label language for start screen again rules (browser first 3, else random)
+            lang = chooseLangForRun();
+            labels = I18N[lang];
+            setPills();
+            // Show start after a short beat
+            setTimeout(()=>{
+                startPanel.style.display = "flex"; // show pills again
+            }, 900);
+        }
+
+        // Button starts: clicking either pill starts a random game (snake or tetris)
+        function handleStart(){
+            const startMode = Math.random() < 0.5 ? "snake" : "tetris";
+            startGame(startMode);
+        }
+        blueBtn.addEventListener("click", handleStart);
+        redBtn.addEventListener("click", handleStart);
+
+        // ===== Main loop =====
+        function loop(){
+            requestAnimationFrame(loop);
+            tick++;
+            if(mode === "snake"){ if(tick % snakeInterval === 0) snakeStep(); }
+            if(mode === "tetris"){ if(tick % dropInterval === 0) tetrisStep(); }
+            if(score >= 100 && mode !== "idle"){ endGame(true); }
+        }
+        loop();
+
+        // Initial paint
+        clearBoard();
+    })();
+</script>
+</body>
+</html>
