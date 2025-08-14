@@ -1,0 +1,3 @@
+User-agent: *
+
+Sitemap: https://keygami.github.io/sitemap.xml

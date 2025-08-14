@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Keygami: Elegant Puzzle Game</title>
+
+  <meta name="description" content="Get ready for a surprising challenge with Keygami. This puzzle game is effortless to learn but masterfully complex, revealing beautiful geometric patterns with every move. Play now and get lost in the flow." />
+  <meta name="keywords" content="Keygami, puzzle game, logic game, indie game, geometric puzzle, seamless puzzle, unexpected puzzle, elegant puzzle, minimalist puzzle, brain teaser, casual game, relaxing game" />
+  <meta name="author" content="Yaroslav Podorvanov, OpenAI ChatGPT, Google Gemini">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Keygami: Elegant Puzzle Game" />
+  <meta property="og:description" content="Get ready for a surprising challenge with Keygami. This puzzle game is effortless to learn but masterfully complex, revealing beautiful geometric patterns with every move. Play now and get lost in the flow." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://keygami.github.io/" />
+  <meta property="og:image" content="https://keygami.github.io/preview.png" />
+  <meta property="og:image:alt" content="Keygami preview" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Keygami: Elegant Puzzle Game" />
+  <meta name="twitter:description" content="Get ready for a surprising challenge with Keygami. This puzzle game is effortless to learn but masterfully complex, revealing beautiful geometric patterns with every move. Play now and get lost in the flow." />
+  <meta name="twitter:image" content="https://keygami.github.io/preview.png" />
+  <meta name="twitter:image:alt" content="Keygami preview" />
+
+  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+  <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+  <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+  <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+  <link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="msapplication-TileColor" content="#ffffff">
+  <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+  <meta name="theme-color" content="#ffffff">
+
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#0f1724;
+    --accent-blue:#2563eb;
+    --accent-red:#ef4444;
+    --cell:#0b1220;
+    --grid-line: #111827;
+    color-scheme: dark;
+  }
+  html,body{
+    height:100%;
+    margin:0;
+    background:linear-gradient(180deg,#071026 0%, #081028 100%);
+    font-family: Inter, Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  #app{
+    width:calc(10 * 28px + 220px);
+    max-width:100%;
+    display:flex;
+    gap:20px;
+    align-items:flex-start;
+  }
+
+  /* left: board */
+  #board-wrap{
+    background:var(--panel);
+    padding:16px;
+    border-radius:12px;
+    box-shadow: 0 10px 30px rgba(2,6,23,0.7);
+  }
+  canvas{
+    display:block;
+    background:linear-gradient(180deg,#06111e,#071327);
+    border-radius:8px;
+  }
+
+  /* right: controls / start */
+  #ui{
+    width:200px;
+    color:#cbd5e1;
+    display:flex;
+    gap:12px;
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .pills{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    padding:12px 8px;
+  }
+  .pill{
+    border-radius:999px;
+    padding:10px 18px;
+    cursor:pointer;
+    font-weight:700;
+    user-select:none;
+    box-shadow: 0 6px 14px rgba(2,6,23,0.6);
+    transform:translateY(0);
+    transition:transform .12s ease;
+    border: 2px solid rgba(255,255,255,0.04);
+  }
+  .pill:active{ transform:translateY(2px); }
+  .blue{ background:var(--accent-blue); color:white; }
+  .red{ background:var(--accent-red); color:white; }
+
+  #msg{
+    text-align:center;
+    padding:8px 6px;
+    font-weight:700;
+    min-height:48px;
+  }
+
+  #score{
+    font-size:14px;
+    text-align:center;
+    color:#e2e8f0;
+  }
+
+  .hidden{ display:none !important; }
+
+  /* small footer */
+  .small{
+    font-size:12px;
+    color:#94a3b8;
+    text-align:center;
+    opacity:0.9;
+  }
+
+  /* buttons after game over / continue are same pills */
+  @media(max-width:880px){
+    #app{ flex-direction:column; align-items:center; }
+    #ui{ width:100%; max-width:420px; }
+  }
+</style>
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-KCN21W9HCZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-KCN21W9HCZ');
+  </script>
+</head>
+<body>
+<div id="app">
+  <div id="board-wrap">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div id="ui">
+    <div id="start-screen">
+      <div class="pills">
+        <div id="pill-blue" class="pill blue">Червона</div>
+        <div id="pill-red" class="pill red">Синя</div>
+      </div>
+      <div id="msg"></div>
+      <div class="small">Keygami</div>
+    </div>
+
+    <div id="hud" class="hidden">
+      <div id="score">Score: 0</div>
+      <div id="mode" style="text-align:center;color:#9ca3af;font-weight:600">Mode</div>
+    </div>
+
+    <div id="end-screen" class="hidden" style="display:flex;flex-direction:column;gap:10px;align-items:center;">
+      <div id="end-msg" style="font-weight:800;font-size:18px"></div>
+      <div class="pills">
+        <div id="pill-blue-again" class="pill blue">Червона</div>
+        <div id="pill-red-again" class="pill red">Синя</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+ Keygami implementation (single file)
+ Comments in English
+ Improvements: fixed Tetris controls — Left/Right move, Down = soft drop, Up = rotate, Space = hard drop
+ Also fixed incorrect calls to this.tetris.moveActive (was undefined) and improved rotation with simple wall-kick attempts.
+*/
+
+(() => {
+  // config
+  const COLS = 10;    // compromise between Tetris and Snake
+  const ROWS = 20;
+  const CELL = 28;    // px cell size
+  const WIDTH = COLS * CELL;
+  const HEIGHT = ROWS * CELL;
+  const canvas = document.getElementById('board');
+  canvas.width = WIDTH;
+  canvas.height = HEIGHT;
+  const ctx = canvas.getContext('2d');
+
+  // DOM
+  const startScreen = document.getElementById('start-screen');
+  const hud = document.getElementById('hud');
+  const endScreen = document.getElementById('end-screen');
+  const pillBlue = document.getElementById('pill-blue');
+  const pillRed = document.getElementById('pill-red');
+  const pillBlueAgain = document.getElementById('pill-blue-again');
+  const pillRedAgain = document.getElementById('pill-red-again');
+  const msg = document.getElementById('msg');
+  const scoreEl = document.getElementById('score');
+  const modeEl = document.getElementById('mode');
+  const endMsg = document.getElementById('end-msg');
+
+  // localization map
+  const translations = {
+  "en": { "Red": "Red", "Blue": "Blue", "toBe": "To be continued...", "gameOver": "Game over" },
+  "uk": { "Red": "Червона", "Blue": "Синя", "toBe": "Далі буде...", "gameOver": "Гру закінчено" },
+  "es": { "Red": "Roja", "Blue": "Azul", "toBe": "Continuará...", "gameOver": "Fin del juego" },
+  "pt": { "Red": "Vermelha", "Blue": "Azul", "toBe": "Continua...", "gameOver": "Fim do jogo" },
+  "ja": { "Red": "赤", "Blue": "青", "toBe": "続く", "gameOver": "ゲームオーバー" },
+  "fr": { "Red": "Rouge", "Blue": "Bleu", "toBe": "À suivre...", "gameOver": "Fin de partie" },
+  "it": { "Red": "Rossa", "Blue": "Blu", "toBe": "Continua...", "gameOver": "Gioco finito" },
+  "tr": { "Red": "Kırmızı", "Blue": "Mavi", "toBe": "Devam edecek...", "gameOver": "Oyun bitti" }
+};
+
+  // determine language based on navigator or randomly select one
+  function detectLang() {
+    // if browser language isn't available or the random check failed, get a random language from the available ones
+    const availableLangs = Object.keys(translations);
+    const randomIndex = Math.floor(Math.random() * availableLangs.length);
+    return availableLangs[randomIndex];
+  }
+
+  // show translated pill labels for first 3 starts
+  function applyPillLabels() {
+    const t = translations[detectLang()];
+    const blueText = t.Red ;
+    const redText  = t.Blue;
+    pillBlue.textContent = blueText;
+    pillRed.textContent = redText;
+    pillBlueAgain.textContent = blueText;
+    pillRedAgain.textContent = redText;
+  }
+  applyPillLabels();
+
+  // prevent arrow keys from scrolling the page
+  window.addEventListener('keydown', (e) => {
+    const keys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '];
+    if (keys.includes(e.key)) {
+      e.preventDefault();
+    }
+  }, {passive:false});
+
+  // game state
+  let game = null;
+
+  function startNewGame() {
+    applyPillLabels();
+
+    // hide UI
+    startScreen.classList.add('hidden');
+    endScreen.classList.add('hidden');
+    hud.classList.remove('hidden');
+    msg.textContent = '';
+    scoreEl.textContent = 'Score: 0';
+    // random start with snake or tetris
+    const mode = Math.random() < 0.5 ? 'snake' : 'tetris';
+    game = new KeygamiGame({cols:COLS, rows:ROWS, cellSize:CELL, ctx});
+    game.start(mode);
+  }
+
+  // attach buttons
+  pillBlue.addEventListener('click', startNewGame);
+  pillRed.addEventListener('click', startNewGame);
+  pillBlueAgain.addEventListener('click', startNewGame);
+  pillRedAgain.addEventListener('click', startNewGame);
+
+  /* -------------------------
+     Core Game Class (Keygami)
+     ------------------------- */
+
+  class KeygamiGame {
+    constructor({cols, rows, cellSize, ctx}) {
+      this.cols = cols;
+      this.rows = rows;
+      this.cellSize = cellSize;
+      this.ctx = ctx;
+      this.grid = this.createGrid();
+      this.mode = null; // 'snake' | 'tetris'
+      this.score = 0;
+      this.tickHandle = null;
+      this.speed = 120; // ms per tick, will use for snake and tetris gravity
+      this.inputDir = {x:1,y:0}; // snake direction
+      this.gameOver = false;
+      this.tetris = null; // tetris-specific state
+      this.snake = null;  // snake-specific state
+      // setup key listener
+      this.onKey = this.onKey.bind(this);
+      window.addEventListener('keydown', this.onKey);
+      this.render(); // initial empty render
+    }
+
+    createGrid(){
+      const g = [];
+      for(let y=0;y<this.rows;y++){
+        const row = new Array(this.cols).fill(0); // 0 empty, 1 filled
+        g.push(row);
+      }
+      return g;
+    }
+
+    clearGrid(){
+      for(let y=0;y<this.rows;y++){
+        for(let x=0;x<this.cols;x++) this.grid[y][x]=0;
+      }
+    }
+
+    start(mode) {
+      this.mode = mode;
+      this.score = 0;
+      this.gameOver = false;
+      this.clearGrid();
+      // init snake or tetris
+      if (mode === 'snake') {
+        this.initSnake();
+      } else {
+        this.initTetris();
+      }
+      // slider: update HUD
+      scoreEl.textContent = `Score: ${this.score}`;
+      modeEl.textContent = `Mode: ${this.mode.toUpperCase()}`;
+      // start tick
+      if(this.tickHandle) clearInterval(this.tickHandle);
+      this.tickHandle = setInterval(()=> this.tick(), this.speed);
+    }
+
+    onKey(e) {
+      // arrow controls used for both modes
+      if (this.gameOver) return;
+      if (e.key === 'ArrowUp') this.handleInput(0, -1);
+      else if (e.key === 'ArrowDown') this.handleInput(0, 1);
+      else if (e.key === 'ArrowLeft') this.handleInput(-1, 0);
+      else if (e.key === 'ArrowRight') this.handleInput(1, 0);
+      else if (e.key === ' ') {
+        // space => hard drop in tetris
+        if (this.mode === 'tetris' && this.tetris) this.dropActive();
+      }
+    }
+
+    handleInput(dx, dy) {
+      if (this.mode === 'snake') {
+        // prevent direct reverse
+        const cur = this.inputDir;
+        if (cur.x === -dx && cur.y === -dy) return;
+        this.inputDir = {x: dx, y: dy};
+      } else if (this.mode === 'tetris') {
+        // Left/Right move, Down = soft drop, Up = rotate
+        if (dx !== 0) {
+          this.moveActive(dx, 0);
+        } else if (dy === 1) {
+          // soft drop
+          this.moveActive(0, 1);
+        } else if (dy === -1) {
+          // rotate
+          this.rotateActive();
+        }
+      }
+    }
+
+    tick(){
+      if(this.mode === 'snake') this.tickSnake();
+      else this.tickTetris();
+      this.render();
+      // check end conditions
+      if(this.score >= 64){
+        this.endWithMessage(trans('toBe'));
+        return;
+      }
+    }
+
+    render(){
+      const ctx = this.ctx;
+      const w = this.cols * this.cellSize;
+      const h = this.rows * this.cellSize;
+      ctx.clearRect(0,0,w,h);
+      // background grid
+      for(let y=0;y<this.rows;y++){
+        for(let x=0;x<this.cols;x++){
+          const v = this.grid[y][x];
+          if(v===0){
+            // empty
+            ctx.fillStyle = '#071627';
+            ctx.fillRect(x*this.cellSize, y*this.cellSize, this.cellSize, this.cellSize);
+          } else {
+            // filled
+            ctx.fillStyle = '#0ea5a0';
+            ctx.fillRect(x*this.cellSize+1, y*this.cellSize+1, this.cellSize-2, this.cellSize-2);
+          }
+        }
+      }
+
+      // overlay snake
+      if(this.snake){
+        // draw body
+        for(let i=0;i<this.snake.body.length;i++){
+          const b=this.snake.body[i];
+          const shade = i===0 ? '#fde047' : '#f97316';
+          ctx.fillStyle = shade;
+          ctx.fillRect(b.x*this.cellSize+1, b.y*this.cellSize+1, this.cellSize-2, this.cellSize-2);
+        }
+        // draw food
+        ctx.fillStyle = '#34d399';
+        ctx.fillRect(this.snake.food.x*this.cellSize+4, this.snake.food.y*this.cellSize+4, this.cellSize-8, this.cellSize-8);
+      }
+
+      // tetris draw blocks
+      if(this.tetris){
+        // drawn in grid already
+        // draw active piece
+        if(this.tetris.active){
+          ctx.fillStyle = '#60a5fa';
+          for(const s of this.tetris.active.blocks){
+            if(s.y>=0){
+              ctx.fillRect(s.x*this.cellSize+1, s.y*this.cellSize+1, this.cellSize-2, this.cellSize-2);
+            }
+          }
+        }
+      }
+
+      // draw grid lines (subtle)
+      ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+      ctx.lineWidth = 1;
+      for(let x=0;x<=this.cols;x++){
+        ctx.beginPath();
+        ctx.moveTo(x*this.cellSize,0);
+        ctx.lineTo(x*this.cellSize,h);
+        ctx.stroke();
+      }
+      for(let y=0;y<=this.rows;y++){
+        ctx.beginPath();
+        ctx.moveTo(0,y*this.cellSize);
+        ctx.lineTo(w,y*this.cellSize);
+        ctx.stroke();
+      }
+    }
+
+    // ---------- Snake logic ----------
+    initSnake(){
+      // start in center with length 3
+      const cx = Math.floor(this.cols/2);
+      const cy = Math.floor(this.rows/2);
+      this.snake = {
+        body: [
+          {x:cx, y:cy},
+          {x:cx-1, y:cy},
+          {x:cx-2, y:cy},
+        ],
+        dir: {x:1,y:0},
+        food: null,
+        grow:0
+      };
+      this.inputDir = {x:1,y:0};
+      this.spawnSnakeFood();
+      // ensure grid cleared
+      this.clearGrid();
+      for(const b of this.snake.body) this.setCell(b.x,b.y,1);
+      this.setCell(this.snake.food.x, this.snake.food.y, 0); // food visual separate
+    }
+
+    spawnSnakeFood(){
+      // place food at random empty cell not occupied by snake
+      let attempts = 0;
+      while(true){
+        const x = Math.floor(Math.random()*this.cols);
+        const y = Math.floor(Math.random()*this.rows);
+        if(!this.snake.body.some(p=>p.x===x && p.y===y)){
+          this.snake.food = {x,y};
+          break;
+        }
+        attempts++;
+        if(attempts>200) { // fallback
+          this.snake.food = {x:0,y:0}; break;
+        }
+      }
+    }
+
+    tickSnake(){
+      // move snake
+      const head = this.snake.body[0];
+      const nd = this.inputDir;
+      const nx = (head.x + nd.x + this.cols) % this.cols;
+      const ny = (head.y + nd.y + this.rows) % this.rows;
+      // insert new head
+      this.snake.body.unshift({x:nx,y:ny});
+      // check food
+      if(nx === this.snake.food.x && ny === this.snake.food.y){
+        this.score += 1;
+        scoreEl.textContent = `Score: ${this.score}`;
+        // grow by 1 (so we don't pop tail)
+        this.snake.grow += 1;
+        this.spawnSnakeFood();
+        // check swap condition
+        if(this.shouldSwapMode()){
+          this.swapToTetrisFromSnake();
+          return;
+        }
+      }
+      // if not growing, remove tail
+      if(this.snake.grow>0){
+        this.snake.grow--;
+      } else {
+        this.snake.body.pop();
+      }
+      // update grid for rendering: we'll clear grid and mark none (snake drawn separately)
+      this.clearGrid();
+      for(const b of this.snake.body) this.setCell(b.x,b.y,0); // keep 0 so snake drawn overlay
+    }
+
+    // convert snake into a falling Tetris piece
+    swapToTetrisFromSnake(){
+      // Build a piece using snake body coordinates relative shape
+      const body = this.snake.body.slice(); // array of {x,y}
+      // normalize coordinates to top-left
+      const minX = Math.min(...body.map(p=>p.x));
+      const minY = Math.min(...body.map(p=>p.y));
+      const rel = body.map(p=>({x:p.x - minX, y:p.y - minY}));
+      // spawn at top center
+      const offsetX = Math.floor((this.cols - (Math.max(...rel.map(r=>r.x))+1))/2);
+      const spawnY = - (Math.min(...rel.map(r=>r.y))) - 1; // maybe negative so it falls in
+      // clear grid and set existing blocks as they were (none in snake mode)
+      this.clearGrid();
+      // initialize tetris state if needed
+      this.initTetris(true); // true to keep existing grid empty
+      // set active piece
+      const blocks = rel.map(r=>({x:r.x + offsetX, y: r.y + spawnY}));
+      this.tetris.active = {blocks};
+      // switch mode
+      this.mode = 'tetris';
+      modeEl.textContent = `Mode: ${this.mode.toUpperCase()}`;
+      // clear snake
+      this.snake = null;
+    }
+
+    // ---------- Tetris logic ----------
+    initTetris(emptyGrid=false){
+      if(!emptyGrid) this.clearGrid();
+      this.tetris = {
+        grid: this.grid, // reference
+        active: null,
+        nextQueue: [],
+      };
+      // spawn a first piece
+      this.spawnTetrisPiece();
+    }
+
+    spawnTetrisPiece(customBlocks=null){
+      // If customBlocks provided, use them as active piece
+      if(customBlocks){
+        this.tetris.active = {blocks: customBlocks};
+        return;
+      }
+      // spawn simple 2x2 square for simplicity (comfortable piece)
+      const pieces = [
+        [{x:0,y:0},{x:1,y:0},{x:0,y:1},{x:1,y:1}], // O
+        [{x:0,y:0},{x:1,y:0},{x:2,y:0},{x:3,y:0}], // I
+        [{x:0,y:0},{x:1,y:0},{x:2,y:0},{x:2,y:1}], // L-ish
+        [{x:0,y:1},{x:1,y:1},{x:1,y:0},{x:2,y:0}], // S-ish
+      ];
+      const shape = pieces[Math.floor(Math.random()*pieces.length)];
+      const w = Math.max(...shape.map(s=>s.x)) + 1;
+      const offsetX = Math.floor((this.cols - w)/2);
+      const offsetY = -1; // spawn slightly above
+      const blocks = shape.map(s=>({x: s.x + offsetX, y: s.y + offsetY}));
+      // collision check: if any block with y>=0 collides => game over
+      const collide = blocks.some(b => b.y>=0 && this.getCell(b.x,b.y)===1);
+      if(collide){
+        this.endWithMessage(trans('gameOver'));
+        return;
+      }
+      this.tetris.active = {blocks};
+    }
+
+    tickTetris(){
+      // active piece falls by +1
+      if(!this.tetris.active){
+        this.spawnTetrisPiece();
+        return;
+      }
+      // move active piece down if possible
+      const moved = this.tetrisMoveDown();
+      if(!moved){
+        // lock piece into grid
+        for(const b of this.tetris.active.blocks){
+          if(b.y>=0 && this.inBounds(b.x,b.y)){
+            this.setCell(b.x,b.y,1);
+          } else if (b.y<0){
+            // block locked above top -> game over
+            this.endWithMessage(trans('gameOver'));
+            return;
+          }
+        }
+        this.tetris.active = null;
+        // clear lines
+        const cleared = this.clearFullLines();
+        if(cleared>0){
+          this.score += cleared;
+          scoreEl.textContent = `Score: ${this.score}`;
+          // maybe swap if condition met
+          if(this.shouldSwapMode()){
+            this.swapToSnakeFromTetris();
+            return;
+          }
+        }
+
+        // spawn next
+        this.spawnTetrisPiece();
+      }
+    }
+
+    tetrisMoveDown(){
+      const dst = this.tetris.active.blocks.map(b=>({x:b.x, y:b.y+1}));
+      if(this.tetrisCollide(dst)) return false;
+      this.tetris.active.blocks = dst;
+      return true;
+    }
+
+    tetrisCollide(blocks){
+      for(const b of blocks){
+        if(!this.inBounds(b.x,b.y)) {
+          // allow y<0 (above top)
+          if(b.y < 0) continue;
+          return true;
+        }
+        if(this.getCell(b.x,b.y)===1) return true;
+      }
+      return false;
+    }
+
+    // tetris move active piece horizontally / vertically
+    moveActive(dx,dy){
+      if(!this.tetris.active) return;
+      const dst = this.tetris.active.blocks.map(b=>({x:b.x+dx,y:b.y+dy}));
+      if(!this.tetrisCollide(dst)){
+        this.tetris.active.blocks = dst;
+      }
+    }
+
+    // hard drop: drop until collision
+    dropActive(){
+      if(!this.tetris.active) return;
+      while(this.tetrisMoveDown()){}
+    }
+
+    // rotate active piece (90deg cw) with simple pivot and wall-kicks
+    rotateActive(){
+      if(!this.tetris || !this.tetris.active) return;
+      const blocks = this.tetris.active.blocks;
+      // choose pivot as the first block (simple)
+      const pivot = blocks[0];
+      const rotated = blocks.map(b => {
+        const rx = pivot.x - (b.y - pivot.y);
+        const ry = pivot.y + (b.x - pivot.x);
+        return {x: rx, y: ry};
+      });
+      // try small offsets (basic wall-kick)
+      const tryOffsets = [{dx:0,dy:0},{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1},{dx:2,dy:0},{dx:-2,dy:0}];
+      for(const o of tryOffsets){
+        const moved = rotated.map(b=>({x:b.x+o.dx,y:b.y+o.dy}));
+        if(!this.tetrisCollide(moved)){
+          this.tetris.active.blocks = moved;
+          return;
+        }
+      }
+      // if none worked, rotation is cancelled
+    }
+
+    clearFullLines(){
+      let cleared = 0;
+      for(let y=0;y<this.rows;y++){
+        let full = true;
+        for(let x=0;x<this.cols;x++){
+          if(this.getCell(x,y)===0){ full=false; break; }
+        }
+        if(full){
+          cleared++;
+          // remove row and move everything above down
+          for(let yy=y; yy>0; yy--){
+            for(let x=0;x<this.cols;x++){
+              this.setCell(x,yy,this.getCell(x,yy-1));
+            }
+          }
+          // top row zeroed
+          for(let x=0;x<this.cols;x++) this.setCell(x,0,0);
+        }
+      }
+      return cleared;
+    }
+
+    // convert tetris -> snake: find largest connected component of filled cells
+    swapToSnakeFromTetris(){
+      // search largest connected group
+      const visited = Array.from({length:this.rows},()=>Array(this.cols).fill(false));
+      let biggest = [];
+      const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+      for(let y=0;y<this.rows;y++){
+        for(let x=0;x<this.cols;x++){
+          if(visited[y][x] || this.getCell(x,y)===0) continue;
+          // bfs
+          const q = [{x,y}];
+          visited[y][x]=true;
+          const comp = [];
+          while(q.length){
+            const p = q.shift();
+            comp.push(p);
+            for(const d of dirs){
+              const nx=p.x+d[0], ny=p.y+d[1];
+              if(nx>=0 && nx<this.cols && ny>=0 && ny<this.rows && !visited[ny][nx] && this.getCell(nx,ny)===1){
+                visited[ny][nx]=true;
+                q.push({x:nx,y:ny});
+              }
+            }
+          }
+          if(comp.length > biggest.length) biggest = comp;
+        }
+      }
+      if(biggest.length===0){
+        // nothing to convert; keep playing tetris
+        return;
+      }
+      // remove biggest component from grid and keep other filled cells as food (they become edible items)
+      for(const c of biggest) this.setCell(c.x,c.y,0);
+      const remainingFoods = [];
+      for(let y=0;y<this.rows;y++){
+        for(let x=0;x<this.cols;x++){
+          if(this.getCell(x,y)===1){
+            remainingFoods.push({x,y});
+            this.setCell(x,y,0); // clear from grid (snake will eat them)
+          }
+        }
+      }
+
+      // create snake body from biggest component — need an ordered path.
+      biggest.sort((a,b)=> a.y - b.y || a.x - b.x);
+      const ordered = [];
+      const copy = biggest.slice();
+      let cur = copy.shift();
+      ordered.push(cur);
+      while(copy.length){
+        let minIdx = 0, minD = Infinity;
+        for(let i=0;i<copy.length;i++){
+          const c = copy[i];
+          const d = Math.abs(c.x-cur.x)+Math.abs(c.y-cur.y);
+          if(d<minD){ minD=d; minIdx=i; }
+        }
+        cur = copy.splice(minIdx,1)[0];
+        ordered.push(cur);
+      }
+      // create snake object
+      this.snake = {
+        body: ordered.map(p=>({x:p.x,y:p.y})),
+        dir: {x:1,y:0},
+        food: null,
+        grow:0
+      };
+      // if there are remainingFoods, pick one as current food; else spawn random
+      if(remainingFoods.length>0){
+        this.snake.food = remainingFoods[Math.floor(Math.random()*remainingFoods.length)];
+      } else {
+        let attempts=0;
+        while(true){
+          const rx=Math.floor(Math.random()*this.cols), ry=Math.floor(Math.random()*this.rows);
+          if(!this.snake.body.some(p=>p.x===rx && p.y===ry)){ this.snake.food={x:rx,y:ry}; break; }
+          if(attempts++>200){ this.snake.food={x:0,y:0}; break; }
+        }
+      }
+
+      // remove tetris active and set mode
+      this.tetris = null;
+      this.mode = 'snake';
+      modeEl.textContent = `Mode: ${this.mode.toUpperCase()}`;
+      // update score display
+      scoreEl.textContent = `Score: ${this.score}`;
+    }
+
+    // ---------- Utils ----------
+    inBounds(x,y){ return x>=0 && x<this.cols && y>=0 && y<this.rows; }
+
+    setCell(x,y,v){ if(this.inBounds(x,y)) this.grid[y][x]=v; }
+    getCell(x,y){ if(!this.inBounds(x,y)) return 0; return this.grid[y][x]; }
+
+    shouldSwapMode(){
+      // when score is divisible by 3 or 5 (i.e., multiple)
+      if(this.score>0 && (this.score % 3 === 0 || this.score % 5 === 0)) return true;
+      return false;
+    }
+
+    endWithMessage(msgText){
+      // stop game loop
+      if(this.tickHandle) clearInterval(this.tickHandle);
+      this.tickHandle = null;
+      this.gameOver = true;
+      // show end screen with translated message (either "To be continue ..." for reaching 64 or "Game over")
+      endMsg.textContent = msgText;
+      // hide hud and show end screen
+      hud.classList.add('hidden');
+      endScreen.classList.remove('hidden');
+      // show message in UI
+      startScreen.classList.add('hidden');
+      // remove event listener
+      window.removeEventListener('keydown', this.onKey);
+    }
+  }
+
+  // translation helper for in-game end messages
+  function trans(key) {
+    const t = translations[detectLang()];
+    if (key === 'toBe') return t.toBe;
+    if (key === 'gameOver') return t.gameOver;
+    return '';
+  }
+
+  // expose trans mapping globally for game to call end messages with language
+  window.trans = (k)=> trans(k);
+
+  // initial render (empty board)
+  (function initialDraw(){
+    // draw faint grid
+    const w=canvas.width, h=canvas.height;
+    ctx.fillStyle = '#071627';
+    ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='rgba(255,255,255,0.02)';
+    for(let x=0;x<=COLS;x++){
+      ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,h); ctx.stroke();
+    }
+    for(let y=0;y<=ROWS;y++){
+      ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(w,y*CELL); ctx.stroke();
+    }
+    // initial message on start screen
+    msg.textContent = ''; // no extra hints per spec
+  })();
+
+  // ensure that end messages follow language and show start buttons again
+  // When a game finishes (KeygamiGame calls endWithMessage which shows end screen),
+  // user can click pills to start new game (attached earlier).
+})();
+</script>
+</body>
+</html>
